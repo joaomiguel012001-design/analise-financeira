@@ -41,10 +41,13 @@ def get_company_data(ticker: str) -> dict:
     ticker_clean = ticker.upper().strip().replace(".SA", "")
     normalized = normalize_ticker(ticker)
 
-    if _is_brazilian(ticker):
-        return _get_brapi_data(ticker_clean, normalized)
-    else:
-        return _get_yfinance_data(ticker, normalized)
+    # Tenta yfinance primeiro (funciona no Railway), fallback para brapi
+    try:
+        return _get_yfinance_data(normalized, normalized)
+    except Exception:
+        if _is_brazilian(ticker):
+            return _get_brapi_data(ticker_clean, normalized)
+        raise
 
 
 def _get_brapi_data(ticker: str, normalized: str) -> dict:
