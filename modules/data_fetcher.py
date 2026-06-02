@@ -50,7 +50,6 @@ def get_company_data(ticker: str) -> dict:
 def _get_brapi_data(ticker: str, normalized: str) -> dict:
     """Busca dados via brapi.dev para ações brasileiras."""
     params = _brapi_params({
-        "modules": "summaryProfile,financialData,defaultKeyStatistics,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory",
         "range": "5y",
         "interval": "1mo",
         "fundamental": "true",
