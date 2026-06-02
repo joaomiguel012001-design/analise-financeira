@@ -49,12 +49,7 @@ def get_company_data(ticker: str) -> dict:
 
 def _get_brapi_data(ticker: str, normalized: str) -> dict:
     """Busca dados via brapi.dev para ações brasileiras."""
-    params = _brapi_params({
-        "range": "5y",
-        "interval": "1mo",
-        "fundamental": "true",
-        "dividends": "true",
-    })
+    params = _brapi_params()
 
     try:
         resp = requests.get(f"{BRAPI_BASE}/quote/{ticker}", params=params, timeout=20)
