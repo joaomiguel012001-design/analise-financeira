@@ -145,68 +145,41 @@ if st.session_state["page"] == "screener":
     st.markdown("---")
 
     # ─── Tabela principal ─────────────────────────────────────────────────────
-    # Prepara colunas de exibição
     df_display = df[["ticker", "nome", "setor", "preco", "variacao_pct", "volume", "market_cap"]].copy()
+    df_display.columns = ["Ticker", "Nome", "Setor", "Preço (R$)", "Variação %", "Volume", "Market Cap (R$)"]
 
-    df_display["preco_fmt"] = df_display["preco"].apply(
-        lambda x: f"R$ {x:,.2f}" if pd.notna(x) and x else "—"
+    df_display["Preço (R$)"] = pd.to_numeric(df_display["Preço (R$)"], errors="coerce")
+    df_display["Variação %"] = pd.to_numeric(df_display["Variação %"], errors="coerce")
+    df_display["Volume"] = pd.to_numeric(df_display["Volume"], errors="coerce")
+    df_display["Market Cap (R$)"] = pd.to_numeric(df_display["Market Cap (R$)"], errors="coerce")
+
+    # Tabela interativa nativa — scrollável, ordenável, sem paginação manual
+    event = st.dataframe(
+        df_display,
+        use_container_width=True,
+        hide_index=True,
+        height=520,
+        on_select="rerun",
+        selection_mode="single-row",
+        column_config={
+            "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+            "Nome": st.column_config.TextColumn("Nome", width="medium"),
+            "Setor": st.column_config.TextColumn("Setor", width="medium"),
+            "Preço (R$)": st.column_config.NumberColumn("Preço (R$)", format="R$ %.2f", width="small"),
+            "Variação %": st.column_config.NumberColumn("Variação %", format="%.2f%%", width="small"),
+            "Volume": st.column_config.NumberColumn("Volume", format="%.0f", width="small"),
+            "Market Cap (R$)": st.column_config.NumberColumn("Market Cap", format="R$ %.0f", width="small"),
+        },
     )
-    df_display["variacao_fmt"] = df_display["variacao_pct"].apply(
-        lambda x: f"{x:+.2f}%" if pd.notna(x) and x is not None else "—"
-    )
-    df_display["market_cap_fmt"] = df_display["market_cap"].apply(
-        lambda x: f"R$ {x/1e9:.1f}B" if pd.notna(x) and x and x > 0 else "—"
-    )
-    df_display["volume_fmt"] = df_display["volume"].apply(
-        lambda x: f"{x/1e6:.1f}M" if pd.notna(x) and x and x > 0 else "—"
-    )
 
-    # Exibe em lotes para performance (paginação simples)
-    PAGE_SIZE = 50
-    total = len(df_display)
-    n_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+    # Abre análise ao clicar numa linha
+    selected = event.selection.rows if event and event.selection else []
+    if selected:
+        ticker_sel = df_display.iloc[selected[0]]["Ticker"]
+        go_to_analysis(ticker_sel)
+        st.rerun()
 
-    if "screener_page" not in st.session_state:
-        st.session_state["screener_page"] = 0
-
-    # Reset página ao mudar filtros
-    col_pg1, col_pg2, col_pg3 = st.columns([1, 3, 1])
-    with col_pg1:
-        if st.button("◀ Anterior") and st.session_state["screener_page"] > 0:
-            st.session_state["screener_page"] -= 1
-    with col_pg2:
-        pg = st.session_state["screener_page"]
-        st.markdown(f"<div style='text-align:center'>Página {pg+1} de {n_pages}</div>", unsafe_allow_html=True)
-    with col_pg3:
-        if st.button("Próxima ▶") and st.session_state["screener_page"] < n_pages - 1:
-            st.session_state["screener_page"] += 1
-
-    start = st.session_state["screener_page"] * PAGE_SIZE
-    end = min(start + PAGE_SIZE, total)
-    page_df = df_display.iloc[start:end]
-
-    # Cabeçalho da tabela
-    hcols = st.columns([1, 3, 2, 1.5, 1.5, 1.5, 1.5, 1])
-    headers = ["Ticker", "Nome", "Setor", "Preço", "Variação", "Volume", "Market Cap", ""]
-    for hcol, h in zip(hcols, headers):
-        hcol.markdown(f"**{h}**")
-    st.markdown("---")
-
-    for _, row in page_df.iterrows():
-        var = row["variacao_pct"]
-        var_color = "#4CAF50" if var and var > 0 else "#f44336" if var and var < 0 else "#888"
-
-        cols = st.columns([1, 3, 2, 1.5, 1.5, 1.5, 1.5, 1])
-        cols[0].markdown(f"**{row['ticker']}**")
-        cols[1].markdown(row["nome"][:35] if row["nome"] else "—")
-        cols[2].markdown(f"<span style='color:#aaa;font-size:0.85rem'>{row['setor'][:25]}</span>", unsafe_allow_html=True)
-        cols[3].markdown(row["preco_fmt"])
-        cols[4].markdown(f"<span style='color:{var_color}'>{row['variacao_fmt']}</span>", unsafe_allow_html=True)
-        cols[5].markdown(f"<span style='color:#aaa'>{row['volume_fmt']}</span>", unsafe_allow_html=True)
-        cols[6].markdown(f"<span style='color:#aaa'>{row['market_cap_fmt']}</span>", unsafe_allow_html=True)
-        if cols[7].button("→", key=f"btn_{row['ticker']}"):
-            go_to_analysis(row["ticker"])
-            st.rerun()
+    st.caption("Clique em uma linha para abrir a análise completa.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
